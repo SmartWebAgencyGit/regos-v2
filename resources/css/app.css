@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+@source '../js';
+@source '../views';
+
+/*
+| Delta Force "tactical" theme: near-black olive surfaces, brand yellow for
+| primary actions, condensed display type for headings and numbers.
+*/
+@theme {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-display: 'Barlow Condensed', ui-sans-serif, system-ui, sans-serif;
+
+    --color-ink-950: #0a0c0b;
+    --color-ink-900: #101311;
+    --color-ink-850: #151916;
+    --color-ink-800: #1c211d;
+    --color-ink-700: #2a302b;
+    --color-ink-600: #3a423c;
+    --color-ink-400: #7d877f;
+    --color-ink-300: #a9b2ab;
+    --color-ink-100: #eef1ed;
+
+    --color-brand-200: #fff7b3;
+    --color-brand-300: #fff06b;
+    --color-brand: #ffe500;
+    --color-brand-600: #dcc500;
+    --color-olive: #4b5a36;
+    --color-olive-300: #a3b585;
+
+    --color-success: #4ade80;
+    --color-danger: #ff6b5e;
+    --color-warning: #ffb547;
+
+    --animate-rise: rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+    @keyframes rise {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+        color-scheme: dark;
+    }
+
+    body {
+        @apply min-h-dvh bg-ink-950 text-ink-100;
+        background-image:
+            radial-gradient(60rem 30rem at 50% -10rem, rgb(75 90 54 / 0.35), transparent 70%),
+            radial-gradient(40rem 20rem at 100% 0, rgb(255 229 0 / 0.05), transparent 70%);
+        background-attachment: fixed;
+    }
+
+    ::selection {
+        @apply bg-brand text-ink-950;
+    }
+
+    :focus-visible {
+        @apply outline-2 outline-offset-2 outline-brand;
+    }
+}
+
+@utility hazard-stripes {
+    background-image: repeating-linear-gradient(-45deg, var(--color-brand) 0 10px, var(--color-ink-950) 10px 20px);
+}
+
+@utility safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility tabular {
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
