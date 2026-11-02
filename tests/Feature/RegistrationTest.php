@@ -123,6 +123,30 @@ class RegistrationTest extends TestCase
         $this->assertSame(HapiFixtures::key(), session('regos.user_key'));
     }
 
+    public function test_a_save_that_times_out_warns_it_may_have_gone_through(): void
+    {
+        $this->hapiResponses['POST /registrations'] = Http::failedConnection('cURL error 28: Operation timed out after 50001 milliseconds with 0 bytes received');
+        $this->fakeHapi($this->hapiBooking);
+
+        $this->signInAs()
+            ->from('/register')
+            ->post('/register', $this->adult())
+            ->assertRedirect('/register')
+            ->assertSessionHas('warning', fn (string $message) => str_contains($message, 'don’t need to submit again'));
+
+        $this->assertSame(HapiFixtures::key(), session('regos.user_key'));
+    }
+
+    public function test_a_save_hapi_never_received_asks_the_player_to_try_again(): void
+    {
+        $this->hapiResponses['POST /registrations'] = Http::failedConnection('cURL error 7: Failed to connect to hapi.test port 443');
+        $this->fakeHapi($this->hapiBooking);
+
+        $this->signInAs()
+            ->post('/register', $this->adult())
+            ->assertSessionHas('error', 'Sorry, we could not save your registration. Please try again.');
+    }
+
     public function test_a_player_can_correct_their_details(): void
     {
         $this->correctableRegistration();

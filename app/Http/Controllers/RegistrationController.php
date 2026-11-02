@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\Hapi\HapiException;
+use App\Exceptions\Hapi\HapiTimeout;
 use App\Http\Requests\StoreRegistrationRequest;
 use App\Portal\BookingLinks;
 use App\Portal\BookingPresenter;
@@ -87,6 +88,9 @@ class RegistrationController extends Controller
                 $request->ip(),
                 $request->userAgent(),
             );
+        } catch (HapiTimeout) {
+            // HAPI may still have saved it; another submit would register the player twice.
+            return back()->with('warning', 'The booking system is taking longer than usual to confirm your registration. If a verification text or email arrives in the next few minutes, you’re registered and don’t need to submit again.');
         } catch (HapiException) {
             return back()->with('error', 'Sorry, we could not save your registration. Please try again.');
         }

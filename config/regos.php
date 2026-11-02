@@ -31,6 +31,8 @@ return [
         'system' => env('HAPI_SYSTEM', 'alpha'),
         'token_ttl' => (int) env('HAPI_TOKEN_TTL', 1800),
         'timeout' => (int) env('HAPI_TIMEOUT', 20),
+        // Saves, which can be slow. Keep below the web server's own limit (nginx: 60s).
+        'write_timeout' => (int) env('HAPI_WRITE_TIMEOUT', 50),
         'fake' => (bool) env('HAPI_FAKE', false),
     ],
 

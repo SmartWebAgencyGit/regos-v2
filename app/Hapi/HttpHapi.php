@@ -3,6 +3,7 @@
 namespace App\Hapi;
 
 use App\Exceptions\Hapi\HapiException;
+use App\Exceptions\Hapi\HapiTimeout;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
@@ -16,7 +17,7 @@ class HttpHapi implements Hapi
     private const TOKEN_CACHE_KEY = 'regos:hapi:token';
 
     /**
-     * @param  array{url: string, username: ?string, password: ?string, system: string, token_ttl: int, timeout: int}  $config
+     * @param  array{url: string, username: ?string, password: ?string, system: string, token_ttl: int, timeout: int, write_timeout: int}  $config
      */
     public function __construct(
         private readonly HttpFactory $http,
@@ -47,7 +48,9 @@ class HttpHapi implements Hapi
      */
     private function send(string $method, string $uri, ?array $payload = null, bool $retried = false): Response
     {
-        $response = $this->request($method, $uri, $payload, $this->token());
+        // Writes can be slow: creating a registration also sends the verification SMS and email.
+        $timeout = $method === 'POST' ? $this->config['write_timeout'] : $this->config['timeout'];
+        $response = $this->request($method, $uri, $payload, $this->token(), $timeout);
 
         if ($response->status() === 401 && ! $retried) {
             $this->cache->forget(self::TOKEN_CACHE_KEY);
@@ -78,14 +81,14 @@ class HttpHapi implements Hapi
     /**
      * @param  array<string, mixed>|null  $payload
      */
-    private function request(string $method, string $uri, ?array $payload, ?string $token): Response
+    private function request(string $method, string $uri, ?array $payload, ?string $token, int $timeout): Response
     {
         $url = rtrim($this->config['url'], '/').$uri;
 
         $request = $this->http
             ->acceptJson()
             ->connectTimeout(5)
-            ->timeout($this->config['timeout'])
+            ->timeout($timeout)
             ->withOptions(['allow_redirects' => false])
             ->when($token, fn (PendingRequest $request) => $request->withToken($token));
 
@@ -95,6 +98,10 @@ class HttpHapi implements Hapi
                 : $request->get($url);
         } catch (ConnectionException $exception) {
             Log::error('HAPI unreachable', ['uri' => $uri, 'error' => $exception->getMessage()]);
+
+            if (str_starts_with($exception->getMessage(), 'cURL error 28:')) {
+                throw new HapiTimeout('HAPI timed out', 0);
+            }
 
             throw new HapiException('HAPI is unreachable', 0);
         }
@@ -107,7 +114,7 @@ class HttpHapi implements Hapi
                 'email' => $this->config['username'],
                 'password' => $this->config['password'],
                 'system' => $this->config['system'],
-            ], null);
+            ], null, $this->config['timeout']);
 
             $token = $response->json('token');
 
