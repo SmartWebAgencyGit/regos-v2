@@ -46,6 +46,10 @@ class FakeHapi implements Hapi
             ], array_map(fn (int $id) => $this->booking($id), array_keys(self::bookings())))];
         }
 
+        if (preg_match('#^/registrations/(\d+)$#', $path, $match)) {
+            return ['data' => $this->state()['registrations'][(int) $match[1]] ?? throw new HapiException('Not found', 404)];
+        }
+
         throw new HapiException('Not found', 404);
     }
 
@@ -220,6 +224,9 @@ class FakeHapi implements Hapi
         return [
             'name_first' => $payload['customer']['name_first'] ?? '',
             'name_last' => $payload['customer']['name_last'] ?? '',
+            // HAPI stores the date of birth as a datetime.
+            'date_of_birth' => isset($payload['customer']['date_of_birth']) ? $payload['customer']['date_of_birth'].' 00:00:00' : null,
+            'address' => ['postcode' => $payload['customer']['address']['postcode'] ?? ''],
             'emails' => [['value' => $payload['customer']['emails'][0]['value'] ?? '']],
             'phones' => [['value' => $payload['customer']['phones'][0]['value'] ?? '']],
         ];
