@@ -45,6 +45,7 @@ Production environment variables:
 | `HAPI_FAKE=false`, `HAPI_URL`, `HAPI_USERNAME`, `HAPI_PASSWORD` | the portal's HAPI account |
 | `HAPI_TIMEOUT` (20), `HAPI_WRITE_TIMEOUT` (50) | seconds to wait for HAPI reads and saves. Creating a registration also sends its SMS, so saves can be slow. Keep the save limit below the web server's own (nginx: 60s) |
 | `REGOS_PAYMENT_DRIVER=worldpay`, `WORLDPAY_PASSWORD` | `WORLDPAY_URL` defaults to live; use `https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp` for testing |
+| `WORLDPAY_MERCHANT_GB` … `_SE`, `WORLDPAY_PASSWORD_GB` … `_SE` | optional, per country (GB, IE, AU, NZ, CA, SE). Merchant codes default to the legacy ones in `config/regos.php` (SE has none, so it takes no online payments). A country without its own password uses `WORLDPAY_PASSWORD` |
 | `SESSION_SECURE_COOKIE=true` | site is served over HTTPS |
 | `TRUSTED_PROXIES` | only if a load balancer sits in front of PHP; otherwise leave blank |
 

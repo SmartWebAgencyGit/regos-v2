@@ -24,6 +24,8 @@ final class PaymentRequest
         public readonly string $city,
         public readonly string $postcode,
         public readonly string $countryCode,
+        // Null to use the gateway's shared password.
+        public readonly ?string $merchantPassword = null,
     ) {}
 
     /**

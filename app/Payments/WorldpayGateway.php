@@ -29,7 +29,7 @@ class WorldpayGateway implements PaymentGateway
     {
         try {
             $response = $this->http
-                ->withBasicAuth($request->merchantCode, (string) $this->config['password'])
+                ->withBasicAuth($request->merchantCode, (string) ($request->merchantPassword ?: $this->config['password']))
                 ->withHeaders(['Content-Type' => 'text/xml; charset=utf-8'])
                 ->connectTimeout(15)
                 ->timeout($this->config['timeout'])

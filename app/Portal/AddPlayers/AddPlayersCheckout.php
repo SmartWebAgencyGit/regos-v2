@@ -75,6 +75,7 @@ class AddPlayersCheckout
                 city: $details['billing_address_town'],
                 postcode: $details['billing_address_postcode'],
                 countryCode: (string) ($country['code'] ?? ''),
+                merchantPassword: $country['merchant_password'] ?? null,
             );
 
             $result = $this->gateway->charge($request);

@@ -106,6 +106,17 @@ class ExtraPlayersTest extends TestCase
         $this->get('/extraplayers/checkout')->assertRedirect(route('extra-players'));
     }
 
+    public function test_a_country_with_its_own_worldpay_password_logs_in_with_it(): void
+    {
+        config(['regos.countries.3.merchant_password' => 'au-secret']);
+        $this->signInAs(7001)->post('/extraplayers', ['quantities' => [9001 => 1]]);
+
+        $this->post('/extraplayers/checkout', $this->paymentDetails())->assertRedirect(route('thanks'));
+
+        Http::assertSent(fn (Request $request) => str_starts_with($request->url(), 'https://worldpay.test')
+            && $request->hasHeader('Authorization', 'Basic '.base64_encode('WORLDPAINTBALLAUCCGBP:au-secret')));
+    }
+
     public function test_a_refused_payment_records_nothing_and_never_echoes_card_details(): void
     {
         $this->worldpayReply = self::worldpayReply('REFUSED');

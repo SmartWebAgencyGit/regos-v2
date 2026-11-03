@@ -87,7 +87,9 @@ return [
     | Keyed by HAPI country id. "rules" selects the indemnity wording shown
     | on /rules ("au" = playing rules / risk / release, "uk" = UK terms).
     | "itinerary" is keyed by gametype id, with "default" as the fallback
-    | (gametype 2 is MiniBall).
+    | (gametype 2 is MiniBall). Each country's Worldpay merchant code can be
+    | changed in .env; it logs in with WORLDPAY_PASSWORD unless the country
+    | has its own password set.
     |
     */
 
@@ -106,6 +108,7 @@ return [
             'handling_fee_rate' => 0.0699,
             'tax_rate' => 0,
             'merchant_code' => env('WORLDPAY_MERCHANT_GB', 'WORLDPAINTBALLUKCCGBP'),
+            'merchant_password' => env('WORLDPAY_PASSWORD_GB'),
         ],
         2 => [
             'code' => 'IE',
@@ -113,6 +116,7 @@ return [
             'handling_fee_rate' => 0.0699,
             'tax_rate' => 0,
             'merchant_code' => env('WORLDPAY_MERCHANT_IE', 'WORLDPAINTBALLIECCGBP'),
+            'merchant_password' => env('WORLDPAY_PASSWORD_IE'),
         ],
         3 => [
             'code' => 'AU',
@@ -127,6 +131,7 @@ return [
             'handling_fee_rate' => 0.0599,
             'tax_rate' => 0,
             'merchant_code' => env('WORLDPAY_MERCHANT_AU', 'WORLDPAINTBALLAUCCGBP'),
+            'merchant_password' => env('WORLDPAY_PASSWORD_AU'),
         ],
         4 => [
             'code' => 'NZ',
@@ -141,6 +146,7 @@ return [
             'handling_fee_rate' => 0.0599,
             'tax_rate' => 0,
             'merchant_code' => env('WORLDPAY_MERCHANT_NZ', 'WORLDPAINTBALLNZCCGBP'),
+            'merchant_password' => env('WORLDPAY_PASSWORD_NZ'),
         ],
         5 => [
             'code' => 'CA',
@@ -154,6 +160,7 @@ return [
             'handling_fee_rate' => 0.0699,
             'tax_rate' => 0.13,
             'merchant_code' => env('WORLDPAY_MERCHANT_CA', 'WORLDPAINTBALLCACCGBP'),
+            'merchant_password' => env('WORLDPAY_PASSWORD_CA'),
         ],
         6 => [
             'code' => 'SE',
@@ -161,6 +168,7 @@ return [
             'handling_fee_rate' => 0,
             'tax_rate' => 0,
             'merchant_code' => env('WORLDPAY_MERCHANT_SE'),
+            'merchant_password' => env('WORLDPAY_PASSWORD_SE'),
         ],
     ],
 
