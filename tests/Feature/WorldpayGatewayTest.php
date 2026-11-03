@@ -8,6 +8,7 @@ use App\Payments\PaymentResult;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class WorldpayGatewayTest extends TestCase
@@ -39,21 +40,46 @@ class WorldpayGatewayTest extends TestCase
         $this->assertSame(PaymentResult::REFUSED_MESSAGE, $result->message);
     }
 
-    public function test_an_error_reply_fails_with_its_code(): void
+    public function test_an_error_reply_fails_with_its_code_and_logs_the_reason_without_card_numbers(): void
     {
-        Http::fake(['worldpay.test/*' => Http::response($this->reply('<error code="5"><![CDATA[Duplicate Order]]></error>'))]);
+        Http::fake(['worldpay.test/*' => Http::response($this->reply('<error code="7"><![CDATA[Invalid payment details : Card number not recognised: 4111111111111111]]></error>'))]);
+        Log::shouldReceive('channel')->with('payments')->andReturnSelf();
+        Log::shouldReceive('warning')->once()->with('Worldpay returned an error', [
+            'order_code' => 'SAM_1001_REGO261027120000',
+            'code' => '7',
+            'message' => 'Invalid payment details : Card number not recognised: …',
+        ]);
 
         $result = app(PaymentGateway::class)->charge($this->payment());
 
         $this->assertFalse($result->successful);
-        $this->assertSame('5', $result->errorCode);
+        $this->assertSame(PaymentResult::REFUSED_MESSAGE, $result->message);
+        $this->assertSame('7', $result->errorCode);
     }
 
-    public function test_a_reply_without_an_authorised_state_is_not_treated_as_paid(): void
+    public function test_a_reply_without_a_payment_outcome_is_logged_and_not_reported_as_a_refusal(): void
     {
-        Http::fake(['worldpay.test/*' => Http::response($this->reply('<orderStatus orderCode="A"><requestInfo/></orderStatus>'))]);
+        Http::fake(['worldpay.test/*' => Http::response($this->reply('<orderStatus orderCode="A"><requestInfo><request3DSecure><paRequest>abc</paRequest></request3DSecure></requestInfo></orderStatus>'))]);
+        Log::shouldReceive('channel')->with('payments')->andReturnSelf();
+        Log::shouldReceive('critical')->once()->with('Worldpay reply had no payment outcome', [
+            'order_code' => 'SAM_1001_REGO261027120000',
+            'reply' => 'paymentService(reply(orderStatus(requestInfo(request3DSecure))))',
+        ]);
 
-        $this->assertFalse(app(PaymentGateway::class)->charge($this->payment())->successful);
+        $result = app(PaymentGateway::class)->charge($this->payment());
+
+        $this->assertFalse($result->successful);
+        $this->assertSame(PaymentResult::UNCONFIRMED_MESSAGE, $result->message);
+    }
+
+    public function test_a_rejected_login_is_logged_with_its_status_and_not_reported_as_a_refusal(): void
+    {
+        // An error page can be well-formed enough to parse as XML.
+        Http::fake(['worldpay.test/*' => Http::response('<html><head><title>401 Unauthorized</title></head><body/></html>', 401)]);
+        Log::shouldReceive('channel')->with('payments')->andReturnSelf();
+        Log::shouldReceive('critical')->once()->with('Worldpay rejected the request', ['order_code' => 'SAM_1001_REGO261027120000', 'status' => 401]);
+
+        $this->assertSame(PaymentResult::UNCONFIRMED_MESSAGE, app(PaymentGateway::class)->charge($this->payment())->message);
     }
 
     public function test_unreadable_replies_and_timeouts_are_reported_as_unconfirmed(): void

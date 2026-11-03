@@ -44,6 +44,16 @@ class WorldpayGateway implements PaymentGateway
             return PaymentResult::failed(PaymentResult::UNCONFIRMED_MESSAGE);
         }
 
+        // e.g. 401 for a wrong password, whose error page would otherwise parse as a reply.
+        if (! $response->successful()) {
+            Log::channel('payments')->critical('Worldpay rejected the request', [
+                'order_code' => $request->orderCode,
+                'status' => $response->status(),
+            ]);
+
+            return PaymentResult::failed(PaymentResult::UNCONFIRMED_MESSAGE);
+        }
+
         return $this->parse($response->body(), $request->orderCode);
     }
 
@@ -112,6 +122,13 @@ class WorldpayGateway implements PaymentGateway
         };
 
         if ($error !== null) {
+            Log::channel('payments')->warning('Worldpay returned an error', [
+                'order_code' => $orderCode,
+                'code' => (string) $error['code'],
+                // Masks anything long enough to be a card number.
+                'message' => preg_replace('/\d{12,}/', '…', trim((string) $error)),
+            ]);
+
             return PaymentResult::failed(PaymentResult::REFUSED_MESSAGE, null, (string) $error['code']);
         }
 
@@ -121,6 +138,29 @@ class WorldpayGateway implements PaymentGateway
             return PaymentResult::authorised($lastEvent);
         }
 
-        return PaymentResult::failed(PaymentResult::REFUSED_MESSAGE, $lastEvent !== '' ? $lastEvent : null);
+        if ($lastEvent === '') {
+            // Not a refusal: e.g. a 3-D Secure request, which this integration can't complete.
+            Log::channel('payments')->critical('Worldpay reply had no payment outcome', [
+                'order_code' => $orderCode,
+                'reply' => self::outline($xml),
+            ]);
+
+            return PaymentResult::failed(PaymentResult::UNCONFIRMED_MESSAGE);
+        }
+
+        return PaymentResult::failed(PaymentResult::REFUSED_MESSAGE, $lastEvent);
+    }
+
+    /**
+     * The reply's element names, e.g. "paymentService(reply(orderStatus(requestInfo)))".
+     * Values are left out: replies can carry masked card numbers and 3-D Secure data.
+     */
+    private static function outline(SimpleXMLElement $element, int $depth = 5): string
+    {
+        $children = $depth > 1
+            ? array_map(fn (SimpleXMLElement $child) => self::outline($child, $depth - 1), iterator_to_array($element->children(), false))
+            : [];
+
+        return $element->getName().($children === [] ? '' : '('.implode(',', $children).')');
     }
 }
